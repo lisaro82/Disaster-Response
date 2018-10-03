@@ -58,7 +58,7 @@ def load_data(p_database_filepath, p_reload = False):
     return v_data[v_cols], v_target, v_mapGenre
 
 
-def build_model():
+def build_model(p_debug):
     return Pipeline([ ('features', FeatureUnion([ ('text_pipeline', Pipeline([ ('step_01', HMsgExtractMessage()),
                                                                                ('step_02', HMsgCountVectorizer()),
                                                                                ('step_03', HMsgTfidfTransformer()) ]) ),
@@ -67,7 +67,7 @@ def build_model():
                                                   ('feat_03', HMsgFeatureExtract('flag_first_nnp')),
                                                   ('feat_04', HMsgFeatureExtract('flag_last_nnp')),
                                                ])),
-                      ('classifier', HMsgClassifier()) ])
+                      ('classifier', HMsgClassifier(p_debug)) ])
 
 def evaluate_model(p_model, p_X, p_y, p_classes):
     y_pred = p_model.predict(p_X)
@@ -77,17 +77,16 @@ def evaluate_model(p_model, p_X, p_y, p_classes):
 def save_model(model, model_filepath):
     pass
 
-def executeMain(p_database_filepath, p_model_filepath):
+def executeMain(p_database_filepath, p_model_filepath, p_debug = False):
     print('Loading data...')
     print(f'    Database filepath <<{p_database_filepath}>>')        
     v_X, v_y, v_mapGenre = load_data(p_database_filepath)
-    X_train, X_test, y_train, y_test = train_test_split(v_X, v_y, test_size = 0.2, random_state = 42)
+    X_train, X_test, y_train, y_test = train_test_split(v_X, v_y, test_size = 0.15, random_state = 42)
     
     print('Building model...')
-    v_model = build_model()
+    v_model = build_model(p_debug)
         
     print('Training model...')
-    v_model.named_steps[v_model.steps[-1][0]].setGenreMap(v_mapGenre)
     v_model.fit(X_train, y_train)
         
     print('Evaluating model...')
