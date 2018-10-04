@@ -7,6 +7,7 @@ from sqlalchemy import create_engine, MetaData, Table
 
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.externals import joblib
 
 from .HMsgClasses import messageTokenize
 from .HMsgClasses import HMsgExtractMessage
@@ -74,14 +75,16 @@ def evaluate_model(p_model, p_X, p_y, p_classes):
     p_model.named_steps[p_model.steps[-1][0]].classificationReport(p_y, y_pred, p_classes)
     return y_pred
 
-def save_model(model, model_filepath):
-    pass
+def save_model(p_model, p_model_filepath):
+    joblib.dump(p_model.named_steps['features'], p_model_filepath)
+    joblib.dump(p_model.named_steps['classifier'], p_model_filepath, compress = 1)
+    return
 
 def executeMain(p_database_filepath, p_model_filepath, p_debug = False):
     print('Loading data...')
     print(f'    Database filepath <<{p_database_filepath}>>')        
     v_X, v_y, v_mapGenre = load_data(p_database_filepath)
-    X_train, X_test, y_train, y_test = train_test_split(v_X, v_y, test_size = 0.15, random_state = 42)
+    X_train, X_test, y_train, y_test = train_test_split(v_X, v_y, test_size = 0.10, random_state = 42)
     
     print('Building model...')
     v_model = build_model(p_debug)

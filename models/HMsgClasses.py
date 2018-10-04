@@ -201,7 +201,7 @@ class HMsgClassifier():
             v_score = make_scorer(recall_score, average = 'macro')
             v_grid_search = GridSearchCV( v_model, 
                                           param_grid = p_param_grid, 
-                                          cv = 6, 
+                                          cv = 12, 
                                           scoring = v_score,
                                           return_train_score = True,
                                           verbose = p_verbose )
@@ -221,7 +221,7 @@ class HMsgClassifier():
             print(f'       Best parameters selected: <<{v_grid_search.best_params_}>> for score <<{v_grid_search.best_score_}>>.')
             return v_grid_search
         
-        def runLinearSVC(p_run, p_weight, p_minScore = 0.8):
+        def runLinearSVC(p_run, p_weight, p_minScore = 0.85):
             v_run = p_run
             v_grid_search = gridSearch( p_run        = v_run,
                                         p_model      = LinearSVC,
@@ -263,12 +263,12 @@ class HMsgClassifier():
         
         if not v_found:
             v_values = p_y_train.value_counts()
-            v_weight  = (1 / (v_values / v_values.iloc[0])).apply(lambda x: 1 if x == 1 else x * 2 ).to_dict()
+            v_weight  = (1 / (v_values / v_values.iloc[0])).apply(lambda x: 1 if x == 1 else x * 2 if x * 2 < 100 else x).to_dict()
             v_grid_search, v_found, v_run = runLinearSVC(v_run, v_weight)
             
-            if v_grid_search.best_score_ > v_best_model.best_score_ + 0.5: # Boost the score for best model with "balanced" weight in   
-                                                                           # order to make it the prefered one, unless there is a  
-                                                                           # difference bigger than 0.5.
+            if v_grid_search.best_score_ > v_best_model.best_score_ + 0.02: # Boost the score for best model with "balanced" weight in   
+                                                                            # order to make it the prefered one, unless there is a  
+                                                                            # difference bigger than 0.02.
                 v_best_model = v_grid_search
         
         print(f'       Final parameters selected: <<{v_best_model.best_params_}>> for score <<{v_best_model.best_score_}>>.')
@@ -286,7 +286,7 @@ class HMsgClassifier():
         for idx in range(p_y.shape[1]):
             v_key = v_classes[idx]
             
-            X_train, X_valid, y_train, y_valid = train_test_split(X_data, y_data, test_size = 0.15, random_state = 42)
+            X_train, X_valid, y_train, y_valid = train_test_split(X_data, y_data, test_size = 0.10, random_state = 42)
             
             print('\n-------------------------------------------------------------------')
             v_count += 1
