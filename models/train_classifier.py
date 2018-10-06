@@ -16,12 +16,12 @@ from .HMsgClasses import HMsgTfidfTransformer
 from .HMsgClasses import HMsgFeatureExtract
 from .HMsgClasses import HMsgClassifier
 
-def load_data(p_database_filepath, p_reload = False):
+def load_data(p_database_filepath, p_reloadData = False):
     v_engine = create_engine(f'sqlite:///{p_database_filepath}')
     v_metadata = MetaData(v_engine, reflect = True) 
     
     v_tabName = 'tabMessagesTokenized'
-    if ( p_reload 
+    if ( p_reloadData 
          or v_tabName not in v_metadata.tables.keys() ):
         if v_tabName in v_metadata.tables.keys():
             v_table = Table(v_tabName, v_metadata)
@@ -42,7 +42,9 @@ def load_data(p_database_filepath, p_reload = False):
 
         v_data.to_sql(v_tabName, v_engine, index = False)
     else:
-        v_data = pd.read_sql_table(v_tabName, v_engine)
+        v_data = pd.read_sql_table(v_tabName, v_engine) 
+        
+    print(f'    Database loaded.')  
     
     v_cols = ['messageTokenized', 'flag_first_verb', 'flag_last_verb', 'flag_first_nnp', 'flag_last_nnp']
 
@@ -59,16 +61,16 @@ def load_data(p_database_filepath, p_reload = False):
     return v_data[v_cols], v_target, v_mapGenre
 
 
-def build_model(p_debug):
+def build_model(p_CVSplits, p_pointsBin, p_maxCateg, p_maxFeatures, p_debug):
     return Pipeline([ ('features', FeatureUnion([ ('text_pipeline', Pipeline([ ('step_01', HMsgExtractMessage()),
-                                                                               ('step_02', HMsgCountVectorizer()),
+                                                                               ('step_02', HMsgCountVectorizer( max_features = p_maxFeatures )),
                                                                                ('step_03', HMsgTfidfTransformer()) ]) ),
                                                   ('feat_01', HMsgFeatureExtract('flag_first_verb')),
                                                   ('feat_02', HMsgFeatureExtract('flag_last_verb')),
                                                   ('feat_03', HMsgFeatureExtract('flag_first_nnp')),
                                                   ('feat_04', HMsgFeatureExtract('flag_last_nnp')),
                                                ])),
-                      ('classifier', HMsgClassifier(p_debug)) ])
+                      ('classifier', HMsgClassifier(p_CVSplits, p_pointsBin, p_maxCateg, p_debug)) ])
 
 def evaluate_model(p_model, p_X, p_y, p_classes):
     y_pred = p_model.predict(p_X)
@@ -76,24 +78,39 @@ def evaluate_model(p_model, p_X, p_y, p_classes):
     return y_pred
 
 def save_model(p_model, p_model_filepath):
-    joblib.dump(p_model.named_steps['features'], p_model_filepath)
-    joblib.dump(p_model.named_steps['classifier'], p_model_filepath, compress = 1)
+    joblib.dump(p_model, p_model_filepath)
+    joblib.dump(p_model.named_steps['features'],   f'{p_model_filepath.split(".pkl")[0]}_features.pkl')
+    joblib.dump(p_model.named_steps['classifier'], f'{p_model_filepath.split(".pkl")[0]}_classifier.pkl')
+    
+    v_vectorizer = p_model.named_steps['features'].transformer_list[0][1].named_steps['step_02']
+    joblib.dump(v_vectorizer, f'{p_model_filepath.split(".pkl")[0]}_vectorizer.pkl')
+    
+    v_transformer = p_model.named_steps['features'].transformer_list[0][1].named_steps['step_03']
+    joblib.dump(v_transformer, f'{p_model_filepath.split(".pkl")[0]}_transformer.pkl')
+    
     return
 
-def executeMain(p_database_filepath, p_model_filepath, p_debug = False):
+def executeMain( p_database_filepath, 
+                 p_model_filepath, 
+                 p_CVSplits     = 12, 
+                 p_pointsBin    = 15, 
+                 p_maxCateg     = None, 
+                 p_maxFeatures  = 12000, 
+                 p_reloadData   = False, 
+                 p_debug        = False ):
     print('Loading data...')
     print(f'    Database filepath <<{p_database_filepath}>>')        
-    v_X, v_y, v_mapGenre = load_data(p_database_filepath)
+    v_X, v_y, v_mapGenre = load_data(p_database_filepath, p_reloadData)
     X_train, X_test, y_train, y_test = train_test_split(v_X, v_y, test_size = 0.10, random_state = 42)
     
     print('Building model...')
-    v_model = build_model(p_debug)
+    v_model =  build_model(p_CVSplits, p_pointsBin, p_maxCateg, p_maxFeatures, p_debug)
         
     print('Training model...')
     v_model.fit(X_train, y_train)
         
     print('Evaluating model...')
-    y_pred_test = evaluate_model(v_model, X_test, y_test, ['genre'])
+    y_pred_test = evaluate_model(v_model, X_test, y_test, None)
 
     print('Saving model...')
     print(f'    Model filepath <<{p_model_filepath}>>')
@@ -105,7 +122,11 @@ def executeMain(p_database_filepath, p_model_filepath, p_debug = False):
 def main():
     if len(sys.argv) == 3:
         v_database_filepath, v_model_filepath = sys.argv[1:]
-        _ = executeMain(v_database_filepath, v_model_filepath)
+        _ = executeMain( p_database_filepath = v_database_filepath, 
+                         p_model_filepath    = v_model_filepath,
+                         p_CVSplits = 3,
+                         p_pointsBin = 15,
+                         p_maxFeatures = 9000 )
     else:
         print('Please provide the filepath of the disaster messages database '\
               'as the first argument and the filepath of the pickle file to '\

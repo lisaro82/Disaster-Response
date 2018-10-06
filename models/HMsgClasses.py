@@ -74,13 +74,18 @@ def messageTokenize(p_text):
     
     return (v_text, v_first_verb, v_last_verb, v_first_nnp, v_last_nnp)
 
-def getTokenizedMessage(p_message):
-    v_token = messageTokenize(v_data.loc[idx, 'message'])
+def getTokenizedMessage(p_message, p_data = None):
+    if not p_data is None:
+        v_token = messageTokenize(p_data.loc[idx, 'message'])
+    else:
+        v_token = messageTokenize(p_message)
+        
     v_data = pd.DataFrame({ 'messageTokenized': v_token[0],
                             'flag_first_verb':  v_token[1],
                             'flag_last_verb':   v_token[2],
                             'flag_first_nnp':   v_token[3],
-                            'flag_last_nnp':    v_token[4] })
+                            'flag_last_nnp':    v_token[4] }, index = [0])
+                            
     return v_data
 
 #----------------------------------------------------------------------------------------------    
@@ -92,7 +97,7 @@ class HMsgExtractMessage():
                 return p_X['messageTokenized']
             else:                
                 for idx in p_X.index:
-                    v_token = getTokenizedMessage(p_X.loc[idx, 'message'])
+                    v_token = getTokenizedMessage(p_X.loc[idx, 'message'], p_X)
                     v_cols  = v_token.columns
                     p_X.loc[idx, v_cols] = v_token.iloc[0, v_cols]
                 return p_X        
@@ -103,28 +108,25 @@ class HMsgExtractMessage():
     
     
 #----------------------------------------------------------------------------------------------    
-class HMsgCountVectorizer():
-    
-    __vectorize = CountVectorizer()
+class HMsgCountVectorizer(CountVectorizer):
     
     def displayTop(self, p_X, p_top):
         v_reverse_dic = {}
-        for key in self.__vectorize.vocabulary_:
-            v_reverse_dic[self.__vectorize.vocabulary_[key]] = key        
+        for key in self.vocabulary_:
+            v_reverse_dic[self.vocabulary_[key]] = key        
         v_top = np.asarray(np.argsort(np.sum(p_X, axis=0))[0, (-1 * p_top):][0, ::-1]).flatten()
         
         print([v_reverse_dic[v] for v in v_top])        
         return
     
-    def fit(self, p_X):
-        self.__vectorize.fit(p_X)
+    def fit(self, p_X):  
+        super(HMsgCountVectorizer, self).fit(p_X)
         
     def transform(self, p_X):
-        return self.__vectorize.transform(p_X)
+        return super(HMsgCountVectorizer, self).transform(p_X)
         
     def fit_transform(self, p_X, p_y = None):
-        self.fit(p_X)
-        v_X = self.transform(p_X)
+        v_X = super(HMsgCountVectorizer, self).fit_transform(p_X)
         print(f'------------------------------------------------------------------')
         print(f'Top 100 words are the following: ')
         self.displayTop(p_X = v_X, p_top = 100)
@@ -132,15 +134,15 @@ class HMsgCountVectorizer():
     
     
 #----------------------------------------------------------------------------------------------    
-class HMsgTfidfTransformer():
+class HMsgTfidfTransformer(TfidfTransformer):
     
     __transformer = TfidfTransformer()
     
     def fit(self, p_X):
-        self.__transformer.fit(p_X)
+        super(HMsgTfidfTransformer, self).fit(p_X)
         
     def transform(self, p_X):
-        v_X = self.__transformer.transform(p_X)
+        v_X = super(HMsgTfidfTransformer, self).transform(p_X)
         v_X.sort_indices()
         return v_X
         
@@ -183,11 +185,18 @@ class HMsgFeatureUnion():
 class HMsgClassifier():
     
     __debug      = None
+    __CVSplits   = None
+    __pointsBin  = None  
+    __maxCateg   = None
     __models     = []
     __classes    = {}
     
-    def __init__(self, p_debug):
-        self.__debug = p_debug
+    def __init__(self, p_CVSplits = 12, p_pointsBin = 15, p_maxCateg = None, p_debug = False):
+        self.__CVSplits  = p_CVSplits
+        self.__pointsBin = p_pointsBin
+        self.__maxCateg  = p_maxCateg
+        self.__debug     = p_debug
+        return
         
     def tuneHyperparams(self, p_X_train, p_y_train, p_className):   
         def gridSearch(p_run, p_model, p_weight, p_param_grid, p_verbose):
@@ -201,7 +210,7 @@ class HMsgClassifier():
             v_score = make_scorer(recall_score, average = 'macro')
             v_grid_search = GridSearchCV( v_model, 
                                           param_grid = p_param_grid, 
-                                          cv = 12, 
+                                          cv = self.__CVSplits, 
                                           scoring = v_score,
                                           return_train_score = True,
                                           verbose = p_verbose )
@@ -232,8 +241,10 @@ class HMsgClassifier():
             for _ in range(10):
                 v_run += 1
                 v_params      = v_grid_search.best_params_            
-                v_list = np.linspace(v_params['C'] / 3, v_params['C'], 15).tolist()
-                v_list.extend(np.linspace(v_params['C'], v_params['C'] * 3, 15).tolist())
+                v_list = np.linspace( v_params['C'] / 3 if v_params['C'] / 3 > 1e-6 else 1e-6, 
+                                      v_params['C'], 
+                                      self.__pointsBin ).tolist()
+                v_list.extend(np.linspace(v_params['C'], v_params['C'] * 3, self.__pointsBin).tolist())
                 v_params['C'] = sorted(set(v_list))
                 v_grid_search = gridSearch( p_run        = v_run,
                                             p_model      = LinearSVC,
@@ -283,7 +294,8 @@ class HMsgClassifier():
         
         v_count = 0
         v_enriched = False # Used to flag that the dataset has been enriched with new categories which are well predicted
-        for idx in range(p_y.shape[1]):
+        v_range = self.__maxCateg if not self.__maxCateg is None else p_y.shape[1]
+        for idx in range(v_range):
             v_key = v_classes[idx]
             
             X_train, X_valid, y_train, y_valid = train_test_split(X_data, y_data, test_size = 0.10, random_state = 42)
@@ -344,7 +356,11 @@ class HMsgClassifier():
                     print(f'\n          *** Score on validation dataset (macro/weighted) <<{v_score_Ma}>> / <<{v_score_We}>>.')
                     print(confusion_matrix(y_true, y_pred))                
 
-                    if v_model.best_score_ > model['model_bestScore']:                
+                    # If the new score is higher, than we chack that the gain on the validation dataset is also there. We consider
+                    # that the gain / loss on weighted score is half as important
+                    if ( v_model.best_score_ > model['model_bestScore']
+                         and ( v_score_Ma - model['valid_score_recall_Ma']
+                               + (v_score_We - model['valid_score_recall_We']) / 2 ) > 0 ):                
                         self.__models.append({ 'key':                    v_key,
                                                'model':                  v_model.best_estimator_,
                                                'model_bestScore':        v_model.best_score_,
@@ -390,8 +406,8 @@ class HMsgClassifier():
         if p_showSummary:
             v_data = pd.DataFrame()
             for model in self.__models:
-                if not model['update']: # If this is the first version of a model generated for the given category, than select correct
-                                        # category index and calculate the scores
+                if not model['update']: # If this is the first version of a model generated for the given category, than select 
+                                        # correct category index and calculate the scores
                     v_key = model['key']
                     v_categ_idx = self.__classes[v_key]['categ_idx']
                     
@@ -413,7 +429,12 @@ class HMsgClassifier():
             print(v_data)
             print(' ')
                         
-        for className in p_classes:
+        if not p_classes is None:
+            v_classes = p_classes
+        else:
+            v_classes = self.__classes.keys()
+            
+        for className in v_classes:
             v_idx = self.__classes[className]['categ_idx']
             print('\n-------------------------------------------------------------------')
             print(f'Details for class: <<{className}>>.')     
