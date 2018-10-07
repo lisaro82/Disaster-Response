@@ -245,6 +245,12 @@ class HMsgClassifier():
     
     def getClasses(self):
         return self.__classes.keys()
+    
+    def getClassesFull(self):
+        return self.__classes
+    
+    def getModels(self):
+        return self.__models
         
     def tuneHyperparams(self, p_X_train, p_y_train, p_className):  
         """ Function tuneHyperparams is used to make the fit and automatic tunning of a model for a given category.
