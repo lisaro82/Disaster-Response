@@ -71,7 +71,14 @@ def index():
                                                      line = dict(width = 1) ) ))
         v_graphs.append({ 'data': v_traces,
                           'layout': { 'title': f'Distribution of Message Genres <<{item}>>',
-                                      'yaxis': { 'title': "Count" } }})
+                                      'yaxis': dict( title = 'Count' ),
+                                      'xaxis': dict( showticklabels = True,
+                                                     tickangle = 40,
+                                                     tickfont = dict( family = 'Old Standard TT, serif',
+                                                                      size   = 12,
+                                                                      color  = 'black' ),
+                                                     exponentformat = 'e',
+                                                     showexponent = 'all' ) }})
         v_traces = []
     
     # encode plotly graphs in JSON

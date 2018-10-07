@@ -32,11 +32,11 @@ def load_data(p_database_filepath, p_reloadData = False):
         v_count = 0
         for idx in v_data.index:
             v_token = getTokenizedMessage(v_data.loc[idx, 'message'])
-            v_data.loc[idx, 'messageTokenized'] = v_token['messageTokenized']
-            v_data.loc[idx, 'flag_first_verb']  = v_token['flag_first_verb']
-            v_data.loc[idx, 'flag_first_nnp']   = v_token['flag_first_nnp']
-            v_data.loc[idx, 'flag_last_nnp']    = v_token['flag_last_nnp']
-            v_data.loc[idx, 'flag_nnp']         = v_token['flag_nnp']            
+            v_data.loc[idx, 'messageTokenized'] = v_token.loc[0, 'messageTokenized']
+            v_data.loc[idx, 'flag_first_verb']  = v_token.loc[0, 'flag_first_verb']
+            v_data.loc[idx, 'flag_first_nnp']   = v_token.loc[0, 'flag_first_nnp']
+            v_data.loc[idx, 'flag_last_nnp']    = v_token.loc[0, 'flag_last_nnp']
+            v_data.loc[idx, 'flag_nnp']         = v_token.loc[0, 'flag_nnp']            
             
             v_count += 1
             if v_count % 600 == 0: print(f'Rows processed: {v_count} / {v_data.shape[0]}')

@@ -62,7 +62,7 @@ def messageTokenize(p_text):
             for idx in range(len(pos_tags)):
                 word, tag = pos_tags[idx]
                 if tag in ['NNP']:
-                    v_nnp == 1
+                    v_nnp = 1
                     break
     
     v_text = re.sub(r'[^a-zA-Z0-9]', ' ', v_text.lower())

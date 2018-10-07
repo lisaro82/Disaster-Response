@@ -11,7 +11,7 @@ In order to process data and execute the ETL pipeline, the Python script **data/
 
 > **python data/process_data.py data/disaster_messages.csv data/disaster_categories.csv data/DisasterResponse.db**
 
-[exampleETL]: https://github.com/lisaro82/___Disaster-Response/blob/master/examples/Execute_ETL_Pipeline.png "Example ETL execution"
+[exampleETL]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Execute_ETL_Pipeline.png "Example ETL execution"
 ![alt text][exampleETL]
 
 ### The machine learning (ML) pipeline module
@@ -21,7 +21,7 @@ In order to build and train the models and execute the ML pipeline, the Python s
    
 > **python models/train_classifier.py data/DisasterResponse.db models/savedModels.pkl**
 
-[exampleML]: https://github.com/lisaro82/___Disaster-Response/blob/master/examples/Execute_ML_Pipeline.png "Example ML execution"
+[exampleML]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Execute_ML_Pipeline.png "Example ML execution"
 ![alt text][exampleML]
 
 The ML pipeline module will do the following main steps:
@@ -34,8 +34,42 @@ In order to build and train the models and execute the ML pipeline, the Python s
    
 > **python runApp.py**
 
-[exampleApp]: https://github.com/lisaro82/___Disaster-Response/blob/master/examples/Execute_Flask_Application.png "Example Flask Application execution"
+[exampleApp]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Execute_Flask_Application.png "Example Flask Application execution"
 ![alt text][exampleApp]
 
 The application will accept the filling of a new message and will output the linked categories.
+
+[message]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 01.png "Disaster Response Project Message"
+![alt text][message]
    
+### Data exploration
+The dataset contains feature <<genre>> that has the following possible values:
+    - direct
+    - news
+    - social
+
+This feature is one of the most balanced one in the dataset. It has the following distribution:
+[genreDistribution01]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 02_01.png "Disaster Response Project Genre distribution 01"
+![alt text][genreDistribution01]
+
+[genreDistribution02]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 02_02.png "Disaster Response Project Genre distribution 02"
+![alt text][genreDistribution02]
+
+[genreDistribution03]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 02_03.png "Disaster Response Project Genre distribution 03"
+![alt text][genreDistribution03]
+
+[genreDistribution04]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 02_04.png "Disaster Response Project Genre distribution 04"
+![alt text][genreDistribution04]
+
+The other categories that have to be predicted have are quite unbalanced. Most of them have class 0 in most of the cases.
+
+[categoriesDistribution01]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 03.png "Disaster Response Project Categories distribution 01"
+![alt text][categoriesDistribution01]
+
+[categoriesDistribution02]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 04.png "Disaster Response Project Categories distribution 02"
+![alt text][categoriesDistribution02]
+
+[categoriesDistribution03]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 05.png "Disaster Response Project Categories distribution 03"
+![alt text][categoriesDistribution03]
+
+For the prediction of these categories, we are using for the parameter <<class_weight>> for the model either the value balanced, or a custom calculated class weight.
