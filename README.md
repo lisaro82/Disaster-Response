@@ -39,7 +39,7 @@ In order to build and train the models and execute the ML pipeline, the Python s
 
 The application will accept the filling of a new message and will output the linked categories.
 
-[message]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 01.png "Disaster Response Project Message"
+[message]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster_Response_Project_01.png "Disaster Response Project Message"
 ![alt text][message]
    
 ### Data exploration
@@ -49,27 +49,27 @@ The dataset contains feature <<genre>> that has the following possible values:
     - social
 
 This feature is one of the most balanced one in the dataset. It has the following distribution:
-[genreDistribution01]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 02_01.png "Disaster Response Project Genre distribution 01"
+[genreDistribution01]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster_Response_Project_02_01.png "Disaster Response Project Genre distribution 01"
 ![alt text][genreDistribution01]
 
-[genreDistribution02]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 02_02.png "Disaster Response Project Genre distribution 02"
+[genreDistribution02]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster_Response_Project_02_02.png "Disaster Response Project Genre distribution 02"
 ![alt text][genreDistribution02]
 
-[genreDistribution03]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 02_03.png "Disaster Response Project Genre distribution 03"
+[genreDistribution03]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster_Response_Project_02_03.png "Disaster Response Project Genre distribution 03"
 ![alt text][genreDistribution03]
 
-[genreDistribution04]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 02_04.png "Disaster Response Project Genre distribution 04"
+[genreDistribution04]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster_Response_Project_02_04.png "Disaster Response Project Genre distribution 04"
 ![alt text][genreDistribution04]
 
 The other categories that have to be predicted have are quite unbalanced. Most of them have class 0 in most of the cases.
 
-[categoriesDistribution01]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 03.png "Disaster Response Project Categories distribution 01"
+[categoriesDistribution01]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster_Response_Project_03.png "Disaster Response Project Categories distribution 01"
 ![alt text][categoriesDistribution01]
 
-[categoriesDistribution02]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 04.png "Disaster Response Project Categories distribution 02"
+[categoriesDistribution02]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster_Response_Project_04.png "Disaster Response Project Categories distribution 02"
 ![alt text][categoriesDistribution02]
 
-[categoriesDistribution03]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 05.png "Disaster Response Project Categories distribution 03"
+[categoriesDistribution03]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster_Response_Project_05.png "Disaster Response Project Categories distribution 03"
 ![alt text][categoriesDistribution03]
 
 For the prediction of these categories, we are using for the parameter <<class_weight>> for the model either the value balanced, or a custom calculated class weight.
