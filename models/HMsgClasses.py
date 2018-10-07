@@ -345,6 +345,7 @@ class HMsgClassifier():
         # The first model that we will try is the LinearSVC model with balanced classes. If the final score is not satisfying, than we will
         # try the LinearSVC model with custom weights.
         v_run = 1
+        v_fweight = 'balanced'
         v_best_model, v_found, v_run = runLinearSVC(v_run, 'balanced')
         
         if not v_found:
@@ -352,12 +353,13 @@ class HMsgClassifier():
             v_weight  = (1 / (v_values / v_values.iloc[0])).apply(lambda x: 1 if x == 1 else x * 2 if x * 2 < 100 else x).to_dict()
             v_grid_search, v_found, v_run = runLinearSVC(v_run, v_weight)
             
-            if v_grid_search.best_score_ > v_best_model.best_score_ + 0.02: # Boost the score for best model with "balanced" weight in   
+            if v_grid_search.best_score_ > v_best_model.best_score_ + 0.01: # Boost the score for best model with "balanced" weight in   
                                                                             # order to make it the prefered one, unless there is a  
                                                                             # difference bigger than 0.02.
                 v_best_model = v_grid_search
+                v_fweight = v_weight
         
-        print(f'       Final parameters selected: <<{v_best_model.best_params_}>> for score <<{v_best_model.best_score_}>>.')
+        print(f'       Final parameters selected: <<{v_best_model.best_params_}>> for score <<{v_best_model.best_score_}>> ({v_fweight}).')
         
         return v_best_model
     
@@ -406,7 +408,7 @@ class HMsgClassifier():
             
             self.__classes[v_key] = { 'categ_idx':     idx,
                                       'model_idx':     idx,
-                                      'createFeature': True if v_model.best_score_ > 0.95 else False }      
+                                      'createFeature': True if v_model.best_score_ > 0.92 else False }      
             if self.__classes[v_key]['createFeature']:
                 v_enriched = True
                 # Integrate the category column for the prediction of the later categories

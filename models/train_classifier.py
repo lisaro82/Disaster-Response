@@ -95,7 +95,7 @@ def executeMain( p_database_filepath,
     print('Loading data...')
     print(f'    Database filepath <<{p_database_filepath}>>')        
     v_X, v_y, v_mapGenre = load_data(p_database_filepath, p_reloadData)
-    X_train, X_test, y_train, y_test = train_test_split(v_X, v_y, test_size = 0.10, random_state = 42)
+    X_train, X_test, y_train, y_test = train_test_split(v_X, v_y, test_size = 0.15, random_state = 2018)
     
     print('Building model...')
     v_model =  build_model(p_CVSplits, p_pointsBin, p_maxCateg, p_maxFeatures, p_debug)
