@@ -30,13 +30,16 @@ The ML pipeline module will do the following main steps:
    - Train one model for every category that has to be predicted. A GridSearchCV for automatic tunning will be performed for every model to be trained. The GridSearchCV will use a recall scoring method with a macro average, in order to ensure that for the different categories the class 1 will have the most important weight.
    
 ### Flask Web App
-In order to build and train the models and execute the ML pipeline, the Python script **runApp.py** must be executed with Python. 
+In order to start the Flask application, the Python script **runApp.py** must be executed with Python. There are two possibilities to run this script:
+   - on local machine, so parameter LOCALHOST must be provided
+   - on a server
    
 > **python runApp.py**
 
 [exampleApp]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Execute_Flask_Application.png "Example Flask Application execution"
 ![alt text][exampleApp]
 
+The Flask application provides some plots based on the training data, and it also accepts a message for which it will predict the values for the different categories.
 The application will accept the filling of a new message and will output the linked categories.
 
 [message]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster Response Project - 01.png "Disaster Response Project Message"
