@@ -43,12 +43,13 @@ The application will accept the filling of a new message and will output the lin
 ![alt text][message]
    
 ### Data exploration
-The dataset contains feature <<genre>> that has the following possible values:
+The dataset contains feature << genre >> that has the following possible values:
     - direct
     - news
     - social
 
 This feature is one of the most balanced one in the dataset. It has the following distribution:
+
 [genreDistribution01]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster_Response_Project_02_01.png "Disaster Response Project Genre distribution 01"
 ![alt text][genreDistribution01]
 
