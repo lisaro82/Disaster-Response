@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.externals import joblib
 
-from .HMsgClasses import messageTokenize
+from .HMsgClasses import getTokenizedMessage
 from .HMsgClasses import HMsgExtractMessage
 from .HMsgClasses import HMsgCountVectorizer
 from .HMsgClasses import HMsgTfidfTransformer
@@ -31,12 +31,13 @@ def load_data(p_database_filepath, p_reloadData = False):
 
         v_count = 0
         for idx in v_data.index:
-            v_token = messageTokenize(v_data.loc[idx, 'message'])
-            v_data.loc[idx, 'messageTokenized'] = v_token[0]
-            v_data.loc[idx, 'flag_first_verb']  = v_token[1]
-            v_data.loc[idx, 'flag_last_verb']   = v_token[2]
-            v_data.loc[idx, 'flag_first_nnp']   = v_token[3]
-            v_data.loc[idx, 'flag_last_nnp']    = v_token[4]
+            v_token = getTokenizedMessage(v_data.loc[idx, 'message'])
+            v_data.loc[idx, 'messageTokenized'] = v_token['messageTokenized']
+            v_data.loc[idx, 'flag_first_verb']  = v_token['flag_first_verb']
+            v_data.loc[idx, 'flag_first_nnp']   = v_token['flag_first_nnp']
+            v_data.loc[idx, 'flag_last_nnp']    = v_token['flag_last_nnp']
+            v_data.loc[idx, 'flag_nnp']         = v_token['flag_nnp']            
+            
             v_count += 1
             if v_count % 600 == 0: print(f'Rows processed: {v_count} / {v_data.shape[0]}')
 
@@ -46,7 +47,7 @@ def load_data(p_database_filepath, p_reloadData = False):
         
     print(f'    Database loaded.')  
     
-    v_cols = ['messageTokenized', 'flag_first_verb', 'flag_last_verb', 'flag_first_nnp', 'flag_last_nnp']
+    v_cols = ['messageTokenized', 'flag_first_verb', 'flag_first_nnp', 'flag_last_nnp', 'flag_nnp']
 
     v_mapGenre = { 'news':    0,
                    'direct':  1,
@@ -66,9 +67,9 @@ def build_model(p_CVSplits, p_pointsBin, p_maxCateg, p_maxFeatures, p_debug):
                                                                                ('step_02', HMsgCountVectorizer( max_features = p_maxFeatures )),
                                                                                ('step_03', HMsgTfidfTransformer()) ]) ),
                                                   ('feat_01', HMsgFeatureExtract('flag_first_verb')),
-                                                  ('feat_02', HMsgFeatureExtract('flag_last_verb')),
-                                                  ('feat_03', HMsgFeatureExtract('flag_first_nnp')),
-                                                  ('feat_04', HMsgFeatureExtract('flag_last_nnp')),
+                                                  ('feat_02', HMsgFeatureExtract('flag_first_nnp')),
+                                                  ('feat_03', HMsgFeatureExtract('flag_last_nnp')),
+                                                  ('feat_04', HMsgFeatureExtract('flag_nnp')),
                                                ])),
                       ('classifier', HMsgClassifier(p_CVSplits, p_pointsBin, p_maxCateg, p_debug)) ])
 
@@ -80,14 +81,7 @@ def evaluate_model(p_model, p_X, p_y, p_classes):
 def save_model(p_model, p_model_filepath):
     joblib.dump(p_model, p_model_filepath)
     joblib.dump(p_model.named_steps['features'],   f'{p_model_filepath.split(".pkl")[0]}_features.pkl')
-    joblib.dump(p_model.named_steps['classifier'], f'{p_model_filepath.split(".pkl")[0]}_classifier.pkl')
-    
-    v_vectorizer = p_model.named_steps['features'].transformer_list[0][1].named_steps['step_02']
-    joblib.dump(v_vectorizer, f'{p_model_filepath.split(".pkl")[0]}_vectorizer.pkl')
-    
-    v_transformer = p_model.named_steps['features'].transformer_list[0][1].named_steps['step_03']
-    joblib.dump(v_transformer, f'{p_model_filepath.split(".pkl")[0]}_transformer.pkl')
-    
+    joblib.dump(p_model.named_steps['classifier'], f'{p_model_filepath.split(".pkl")[0]}_classifier.pkl')    
     return
 
 def executeMain( p_database_filepath, 

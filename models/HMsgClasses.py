@@ -25,6 +25,9 @@ from sklearn.metrics import make_scorer, recall_score, precision_recall_fscore_s
 from sklearn.svm import LinearSVC
 
 def messageTokenize(p_text):
+    """ 
+        Function messageTokenize does the transformation of a message into a tokenized message. It also returns a flag is the message starts / ends with a verb or a proper noun.
+    """
     v_text = p_text
     
     v_url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
@@ -35,20 +38,15 @@ def messageTokenize(p_text):
     
     sentence_list = nltk.sent_tokenize(v_text)
     v_first_verb = 0
-    v_last_verb  = 0
     v_first_nnp  = 0
     v_last_nnp   = 0
+    v_nnp        = 0
     for sentence in sentence_list:
         pos_tags = nltk.pos_tag(word_tokenize(sentence))
         if v_first_verb == 0:
             first_word, first_tag = pos_tags[0]
             if first_tag in ['VB', 'VBP', 'VBZ', 'VBG']:
                 v_first_verb = 1
-                
-        if v_last_verb == 0:
-            last_word, last_tag = pos_tags[-1]
-            if last_tag in ['VB', 'VBP', 'VBZ', 'VBG']:
-                v_last_verb = 1
                 
         if v_first_nnp == 0:
             first_word, first_tag = pos_tags[0]
@@ -59,6 +57,13 @@ def messageTokenize(p_text):
             last_word, last_tag = pos_tags[-1]
             if last_tag in ['NNP']:
                 v_last_nnp = 1
+        
+        if v_nnp == 0:
+            for idx in range(len(pos_tags)):
+                word, tag = pos_tags[idx]
+                if tag in ['NNP']:
+                    v_nnp == 1
+                    break
     
     v_text = re.sub(r'[^a-zA-Z0-9]', ' ', v_text.lower())
     v_tokens = [item.strip() for item in word_tokenize(v_text) if item not in stopwords.words('english')]
@@ -72,9 +77,12 @@ def messageTokenize(p_text):
     
     v_text = ' '.join(v_clean_tokens)
     
-    return (v_text, v_first_verb, v_last_verb, v_first_nnp, v_last_nnp)
+    return (v_text, v_first_verb, v_first_nnp, v_last_nnp, v_nnp)
 
 def getTokenizedMessage(p_message, p_data = None):
+    """ 
+        Function getTokenizedMessage returns a dataframe with the 5 features linked to a message.
+    """
     if not p_data is None:
         v_token = messageTokenize(p_data.loc[idx, 'message'])
     else:
@@ -82,14 +90,18 @@ def getTokenizedMessage(p_message, p_data = None):
         
     v_data = pd.DataFrame({ 'messageTokenized': v_token[0],
                             'flag_first_verb':  v_token[1],
-                            'flag_last_verb':   v_token[2],
-                            'flag_first_nnp':   v_token[3],
-                            'flag_last_nnp':    v_token[4] }, index = [0])
+                            'flag_first_nnp':   v_token[2],
+                            'flag_last_nnp':    v_token[3],
+                            'flag_nnp':         v_token[4] }, index = [0])
                             
     return v_data
 
 #----------------------------------------------------------------------------------------------    
 class HMsgExtractMessage():
+    """ 
+        Class HMsgExtractMessage extract the message from the dataframe, or creates a new dataframe with the needed features when
+        a new text is provided.
+    """
 
     def transform(self, p_X):
         if type(p_X) == pd.core.frame.DataFrame:
@@ -100,8 +112,8 @@ class HMsgExtractMessage():
                     v_token = getTokenizedMessage(p_X.loc[idx, 'message'], p_X)
                     v_cols  = v_token.columns
                     p_X.loc[idx, v_cols] = v_token.iloc[0, v_cols]
-                return p_X        
-        return getTokenizedMessage(p_x)                
+                return p_X
+        return getTokenizedMessage(p_X)                
 
     def fit_transform(self, p_X, p_y = None):
         return self.transform(p_X)
@@ -109,6 +121,9 @@ class HMsgExtractMessage():
     
 #----------------------------------------------------------------------------------------------    
 class HMsgCountVectorizer(CountVectorizer):
+    """ 
+        Class HMsgCountVectorizer extends class CountVectorizer and provides the posibility to display the top words.
+    """
     
     def displayTop(self, p_X, p_top):
         v_reverse_dic = {}
@@ -135,6 +150,9 @@ class HMsgCountVectorizer(CountVectorizer):
     
 #----------------------------------------------------------------------------------------------    
 class HMsgTfidfTransformer(TfidfTransformer):
+    """ 
+        Class HMsgTfidfTransformer extends class TfidfTransformer and makes a sorting on the indices.
+    """
     
     __transformer = TfidfTransformer()
     
@@ -153,6 +171,9 @@ class HMsgTfidfTransformer(TfidfTransformer):
         
 #----------------------------------------------------------------------------------------------    
 class HMsgFeatureExtract():
+    """ 
+        Class HMsgFeatureExtract extracts a particular column from a dataframe.
+    """
     
     __column = ''
     
@@ -160,7 +181,11 @@ class HMsgFeatureExtract():
         self.__column = p_column
         
     def transform(self, p_X):
-        return p_X[self.__column].values.reshape(-1, 1)
+        if type(p_X) == pd.core.frame.DataFrame:
+            return p_X[self.__column].values.reshape(-1, 1)
+            
+        v_data = getTokenizedMessage(p_X)
+        return v_data[self.__column].values.reshape(-1, 1)
         
     def fit_transform(self, p_X, p_y = None):
         return self.transform(p_X)
@@ -168,6 +193,9 @@ class HMsgFeatureExtract():
     
 #----------------------------------------------------------------------------------------------    
 class HMsgFeatureUnion():
+    """ 
+        Class HMsgFeatureUnion stores a dataframe to be returned for later use.
+    """
     
     __data = None
     
@@ -180,16 +208,33 @@ class HMsgFeatureUnion():
     def fit_transform(self, p_X, p_y = None):
         return self.transform(p_X)
     
-        
+import pickle        
 #----------------------------------------------------------------------------------------------    
 class HMsgClassifier():
+    """ 
+        Class HMsgClassifier is used in the pipeline as the classifier.
+        It creates a different tuned model for every category that has to be predicted.
+    """
     
     __debug      = None
-    __CVSplits   = None
-    __pointsBin  = None  
-    __maxCateg   = None
-    __models     = []
-    __classes    = {}
+    __CVSplits   = None # Number of CV splits to be used by GridSearchCV.
+    __pointsBin  = None # Number of binning points to be created around the target value for the "C" hyper-parameter. 
+    __maxCateg   = None # Maximum number of categories to be predicted. Usually set during debugging phase.
+    __models     = []   # The models that have been fitted for the different categories. A category might have multiple models that
+                        # have been fitted for it.
+    __classes    = {}   # The categories for which one or multiple models have been fitted. It contains the link to the best fitted
+    
+    def __getstate__(self):
+        v_state = self.__dict__.copy()    
+        v_state['__classes'] = self.__classes
+        v_state['__models']  = self.__models
+        return v_state
+    
+    def __setstate__(self, p_state):
+        self.__dict__.update(p_state)  
+        self.__classes = p_state['__classes']
+        self.__models  = p_state['__models']
+        return
     
     def __init__(self, p_CVSplits = 12, p_pointsBin = 15, p_maxCateg = None, p_debug = False):
         self.__CVSplits  = p_CVSplits
@@ -197,9 +242,28 @@ class HMsgClassifier():
         self.__maxCateg  = p_maxCateg
         self.__debug     = p_debug
         return
+    
+    def getClasses(self):
+        return self.__classes.keys()
         
-    def tuneHyperparams(self, p_X_train, p_y_train, p_className):   
-        def gridSearch(p_run, p_model, p_weight, p_param_grid, p_verbose):
+    def tuneHyperparams(self, p_X_train, p_y_train, p_className):  
+        """ Function tuneHyperparams is used to make the fit and automatic tunning of a model for a given category.
+            Args:
+                - p_X_train   - training features to be used
+                - p_y_train   - the values for the target
+                - p_className - category to be predicted
+            Returns: the best fitted model
+        """ 
+        def gridSearch(p_run, p_model, p_weight, p_param_grid, p_verbose):  
+            """ Function gridSearch is used to perform the GridSearchCV for a given model.
+                Args:
+                    - p_run         - the number of the current run
+                    - p_model       - model to be tunned
+                    - p_weight      - category weight to be used for the model
+                    - p_param_grid  - the parameters to be used for GridSearchCV
+                    - p_verbose     - the "verbose" parameter for GridSearchCV
+                Returns: the grid serach object
+            """ 
             v_param_grid = p_param_grid
             if 'C' in v_param_grid.keys():
                 v_param_grid['C'] = np.round(v_param_grid['C'], 4).tolist()
@@ -230,7 +294,18 @@ class HMsgClassifier():
             print(f'       Best parameters selected: <<{v_grid_search.best_params_}>> for score <<{v_grid_search.best_score_}>>.')
             return v_grid_search
         
-        def runLinearSVC(p_run, p_weight, p_minScore = 0.85):
+        def runLinearSVC(p_run, p_weight, p_minScore = 0.85):  
+            """ Function runLinearSVC is used to create a LinearSVC model and the parameters for the GridSearchCV.
+                The function will perform a first search based on standard list for the "C" parameter. Once a best model is 
+                determined, a recursive serch will be executed around the next best "C" value found in order to try to find an even
+                better "C" parameter for the LinearSVC model.
+                The number of bins to be used around the parameter that has been found, is being set at class level.
+                Args:
+                    - p_run         - the number of the current run
+                    - p_weight      - category weight to be used for the model
+                    - p_minScore    - the verbose parameter for GridSearchCV
+                Returns: the best model that has been found
+            """ 
             v_run = p_run
             v_grid_search = gridSearch( p_run        = v_run,
                                         p_model      = LinearSVC,
@@ -286,9 +361,17 @@ class HMsgClassifier():
         
         return v_best_model
     
-    def fit(self, p_X, p_y):                    
+    def fit(self, p_X, p_y):  
+        """ Function fit is used to create a new model for every category.
+            For the models that have a predictive score bigger than 0.9, their prediction will be used in order to enrich the features
+            set for the other models. If a model has a predictive score smaller than 0.8, the enriched dataset will be used to try
+            to tune a new model.
+            Args:
+                - p_X  - training features to be used
+                - p_y  - the values for the target
+        """ 
         
-        v_classes = p_y.columns.tolist()
+        v_classes = p_y.columns.tolist() # Extract the categories list for which a model should be fitted
         X_data = p_X
         y_data = p_y
         
@@ -323,7 +406,7 @@ class HMsgClassifier():
             
             self.__classes[v_key] = { 'categ_idx':     idx,
                                       'model_idx':     idx,
-                                      'createFeature': True if v_model.best_score_ > 0.9 else False }      
+                                      'createFeature': True if v_model.best_score_ > 0.95 else False }      
             if self.__classes[v_key]['createFeature']:
                 v_enriched = True
                 # Integrate the category column for the prediction of the later categories
@@ -372,7 +455,13 @@ class HMsgClassifier():
                         print(f'\n          *** Model has been refitted from <<{model["model_bestScore"]}>> to <<{v_model.best_score_}>>.')
         return
     
-    def generatePredictions(self, p_X, p_predictProba = False):        
+    def generatePredictions(self, p_X, p_predictProba = False):  
+        """ Function generatePredictions is used to predict / predict the probability for all the categories.
+            Args:
+                - p_X             - features to be used for predicting
+                - p_predictProba  - flag indicating that a probability should be predicted
+            Returns: the prediction
+        """       
         X_data = p_X
         v_return = np.zeros([p_X.shape[0], len(self.__classes)])
         for model in self.__models:
@@ -396,13 +485,21 @@ class HMsgClassifier():
         
         return v_return
     
-    def predict(self, p_X):        
+    def predict(self, p_X):   
         return self.generatePredictions(p_X = p_X, p_predictProba = False)
     
     def predict_proba(self, p_X):         
         return self.generatePredictions(p_X = p_X, p_predictProba = True)
     
-    def classificationReport(self, p_y_true, p_y_pred, p_classes, p_showSummary = True): 
+    def classificationReport(self, p_y_true, p_y_pred, p_classes = None, p_showSummary = True):  
+        """ Function classificationReport is used to create a classification report and confusion matrix based on the predictions
+            of the models.
+            Args:
+                - p_y_true        - true target values (all categories)
+                - p_y_pred        - predicted target values (all categories)
+                - p_classes       - categories list for which a report should be generated
+                - p_showSummary   - flag for generating a summary report
+        """       
         if p_showSummary:
             v_data = pd.DataFrame()
             for model in self.__models:
