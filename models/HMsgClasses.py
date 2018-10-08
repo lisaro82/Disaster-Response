@@ -2,6 +2,8 @@ import re
 import pandas as pd
 import numpy as np
 
+from IPython.display import display
+
 # Try to import the libraries for nltk. In case of error, download the necessary components and try again.
 for _ in range(2):
     try:
@@ -21,7 +23,7 @@ from sklearn.pipeline import FeatureUnion
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import confusion_matrix, classification_report
-from sklearn.metrics import make_scorer, recall_score, precision_recall_fscore_support, roc_curve, auc
+from sklearn.metrics import make_scorer, recall_score, precision_recall_fscore_support
 from sklearn.svm import LinearSVC
 
 def messageTokenize(p_text):
@@ -38,30 +40,37 @@ def messageTokenize(p_text):
     
     sentence_list = nltk.sent_tokenize(v_text)
     v_first_verb = 0
+    v_last_verb  = 0
     v_first_nnp  = 0
     v_last_nnp   = 0
     v_nnp        = 0
     for sentence in sentence_list:
         pos_tags = nltk.pos_tag(word_tokenize(sentence))
+        
         if v_first_verb == 0:
-            first_word, first_tag = pos_tags[0]
-            if first_tag in ['VB', 'VBP', 'VBZ', 'VBG']:
+            v_word, v_tag = pos_tags[0]
+            if v_tag in ['VB', 'VBP', 'VBZ', 'VBG']:
                 v_first_verb = 1
                 
+        if v_last_verb == 0:
+            v_word, v_tag = pos_tags[-1]
+            if v_tag in ['VB', 'VBP', 'VBZ', 'VBG']:
+                v_last_verb = 1
+                
         if v_first_nnp == 0:
-            first_word, first_tag = pos_tags[0]
-            if first_tag in ['NNP']:
+            v_word, v_tag = pos_tags[0]
+            if v_tag in ['NNP']:
                 v_first_nnp = 1
                 
         if v_last_nnp == 0:
-            last_word, last_tag = pos_tags[-1]
-            if last_tag in ['NNP']:
+            v_word, v_tag = pos_tags[-1]
+            if v_tag in ['NNP']:
                 v_last_nnp = 1
         
         if v_nnp == 0:
             for idx in range(len(pos_tags)):
-                word, tag = pos_tags[idx]
-                if tag in ['NNP']:
+                v_word, v_tag = pos_tags[idx]
+                if v_tag in ['NNP']:
                     v_nnp = 1
                     break
     
@@ -77,22 +86,20 @@ def messageTokenize(p_text):
     
     v_text = ' '.join(v_clean_tokens)
     
-    return (v_text, v_first_verb, v_first_nnp, v_last_nnp, v_nnp)
+    return (v_text, v_first_verb, v_last_verb, v_first_nnp, v_last_nnp, v_nnp)
 
-def getTokenizedMessage(p_message, p_data = None):
+def getTokenizedMessage(p_message):
     """ 
         Function getTokenizedMessage returns a dataframe with the 5 features linked to a message.
     """
-    if not p_data is None:
-        v_token = messageTokenize(p_data.loc[idx, 'message'])
-    else:
-        v_token = messageTokenize(p_message)
+    v_token = messageTokenize(p_message)
         
     v_data = pd.DataFrame({ 'messageTokenized': v_token[0],
                             'flag_first_verb':  v_token[1],
-                            'flag_first_nnp':   v_token[2],
-                            'flag_last_nnp':    v_token[3],
-                            'flag_nnp':         v_token[4] }, index = [0])
+                            'flag_last_verb':   v_token[2],
+                            'flag_first_nnp':   v_token[3],
+                            'flag_last_nnp':    v_token[4],
+                            'flag_nnp':         v_token[5] }, index = [0])
                             
     return v_data
 
@@ -104,18 +111,20 @@ class HMsgExtractMessage():
     """
 
     def transform(self, p_X):
+        print('    Call HMsgExtractMessage ==> transform.')
         if type(p_X) == pd.core.frame.DataFrame:
             if 'messageTokenized' in p_X.keys():
                 return p_X['messageTokenized']
             else:                
                 for idx in p_X.index:
-                    v_token = getTokenizedMessage(p_X.loc[idx, 'message'], p_X)
+                    v_token = getTokenizedMessage(p_X.loc[idx, 'message'])
                     v_cols  = v_token.columns
                     p_X.loc[idx, v_cols] = v_token.iloc[0, v_cols]
                 return p_X
         return getTokenizedMessage(p_X)                
 
     def fit_transform(self, p_X, p_y = None):
+        print('    Call HMsgExtractMessage ==> fit_transform.')
         return self.transform(p_X)
     
     
@@ -134,17 +143,27 @@ class HMsgCountVectorizer(CountVectorizer):
         print([v_reverse_dic[v] for v in v_top])        
         return
     
+    def fitData(self, p_X):
+        print(f'    Call HMsgCountVectorizer ==> fitData => {p_X.shape}.')
+        super(HMsgCountVectorizer, self).fit_transform(p_X)
+    
     def fit(self, p_X):  
-        super(HMsgCountVectorizer, self).fit(p_X)
+        print(f'    Call HMsgCountVectorizer ==> fit.')
+        self.fitData(p_X)
         
     def transform(self, p_X):
+        print('    Call HMsgCountVectorizer ==> transform.')
         return super(HMsgCountVectorizer, self).transform(p_X)
         
     def fit_transform(self, p_X, p_y = None):
-        v_X = super(HMsgCountVectorizer, self).fit_transform(p_X)
+        print('    Call HMsgCountVectorizer ==> fit_transform.')        
+        self.fitData(p_X)
+        
+        v_X = self.transform(p_X)
         print(f'------------------------------------------------------------------')
         print(f'Top 100 words are the following: ')
         self.displayTop(p_X = v_X, p_top = 100)
+        
         return v_X
     
     
@@ -154,17 +173,18 @@ class HMsgTfidfTransformer(TfidfTransformer):
         Class HMsgTfidfTransformer extends class TfidfTransformer and makes a sorting on the indices.
     """
     
-    __transformer = TfidfTransformer()
-    
     def fit(self, p_X):
+        print('    Call HMsgTfidfTransformer ==> fit.')
         super(HMsgTfidfTransformer, self).fit(p_X)
         
     def transform(self, p_X):
+        print('    Call HMsgTfidfTransformer ==> transform.')
         v_X = super(HMsgTfidfTransformer, self).transform(p_X)
         v_X.sort_indices()
         return v_X
         
     def fit_transform(self, p_X, p_y = None):
+        print('    Call HMsgTfidfTransformer ==> fit_transform.')
         self.fit(p_X)
         return self.transform(p_X)
         
@@ -208,7 +228,7 @@ class HMsgFeatureUnion():
     def fit_transform(self, p_X, p_y = None):
         return self.transform(p_X)
     
-import pickle        
+       
 #----------------------------------------------------------------------------------------------    
 class HMsgClassifier():
     """ 
@@ -295,7 +315,7 @@ class HMsgClassifier():
                                         'Std Test':    pd.Series(v_grid_search.cv_results_['std_test_score']) })
                 v_cols = v_data.drop('Params', axis = 1).columns
                 v_data[v_cols] = v_data[v_cols].round(4)
-                print(v_data[['Params', 'Mean Train', 'Mean Test', 'Std Train', 'Std Test']])
+                display(v_data[['Params', 'Mean Train', 'Mean Test', 'Std Train', 'Std Test']])
             
             print(f'       Best parameters selected: <<{v_grid_search.best_params_}>> for score <<{v_grid_search.best_score_}>>.')
             return v_grid_search
@@ -379,18 +399,23 @@ class HMsgClassifier():
                 - p_y  - the values for the target
         """ 
         
-        v_classes = p_y.columns.tolist() # Extract the categories list for which a model should be fitted
-        X_data = p_X
-        y_data = p_y
+        if type(p_y) == tuple:
+            X_data = p_X
+            y_data = p_y[0]            
+            X_train, X_valid, y_train, y_valid = X_data, p_y[1], y_data, p_y[2]
+        else:        
+            X_data = p_X
+            y_data = p_y            
+            X_train, X_valid, y_train, y_valid = train_test_split(X_data, y_data, test_size = 0.10, random_state = 42)            
         
+        v_classes = y_data.columns.tolist() # Extract the categories list for which a model should be fitted
+            
         v_count = 0
         v_enriched = False # Used to flag that the dataset has been enriched with new categories which are well predicted
-        v_range = self.__maxCateg if not self.__maxCateg is None else p_y.shape[1]
+        v_range = self.__maxCateg if not self.__maxCateg is None else y_data.shape[1]
         for idx in range(v_range):
             v_key = v_classes[idx]
-            
-            X_train, X_valid, y_train, y_valid = train_test_split(X_data, y_data, test_size = 0.10, random_state = 42)
-            
+                        
             print('\n-------------------------------------------------------------------')
             v_count += 1
             print(f'    {v_count}. Fit model for class: <<{v_classes[idx]}>> ({X_train.shape}).')    
@@ -409,27 +434,28 @@ class HMsgClassifier():
                                    'model_bestScore':        v_model.best_score_,
                                    'valid_score_recall_Ma':  v_score_Ma,
                                    'valid_score_recall_We':  v_score_We,
-                                   'useModel':               True if v_model.best_score_ > 0.8 else False,
+                                   'useModel':               True,
                                    'update':                 False })
             
             self.__classes[v_key] = { 'categ_idx':     idx,
                                       'model_idx':     idx,
-                                      'createFeature': True if v_model.best_score_ > 0.92 else False }      
+                                      'createFeature': True if v_model.best_score_ > 0.90 else False }      
             if self.__classes[v_key]['createFeature']:
                 v_enriched = True
                 # Integrate the category column for the prediction of the later categories
-                X_data = FeatureUnion([ ('feat_01', HMsgFeatureUnion(X_data)),
-                                        ('feat_02', HMsgFeatureUnion(y_data.iloc[:, idx].values.reshape(-1, 1))) ]).fit_transform(None)
+                X_train = FeatureUnion([ ('feat_01', HMsgFeatureUnion(X_train)),
+                                         ('feat_02', HMsgFeatureUnion(y_train.iloc[:, idx].values.reshape(-1, 1))) ]).fit_transform(None)
+    
+                X_valid = FeatureUnion([ ('feat_01', HMsgFeatureUnion(X_valid)),
+                                         ('feat_02', HMsgFeatureUnion(y_valid.iloc[:, idx].values.reshape(-1, 1))) ]).fit_transform(None)
         
         if v_enriched:
             # If the model for a particular category is not ok, than try to generate a new model based on the enriched dataset
             for model in self.__models:
-                if not model['useModel']:
+                if not model['model_bestScore'] > 0.8:
                     v_key = model['key']
                     v_categ_idx = self.__classes[v_key]['categ_idx']
-
-                    X_train, X_valid, y_train, y_valid = train_test_split(X_data, y_data, test_size = 0.15, random_state = 42)
-
+                   
                     print('\n-------------------------------------------------------------------')
                     v_count += 1
                     print(f'    {v_count}. ReFit model for class: <<{v_key}>> ({X_train.shape}).')    
@@ -460,6 +486,7 @@ class HMsgClassifier():
                                                'useModel':               True,
                                                'update':                 True })
                         self.__classes[v_key]['model_idx'] = len(self.__models) - 1
+                        model['useModel'] = False
                         print(f'\n          *** Model has been refitted from <<{model["model_bestScore"]}>> to <<{v_model.best_score_}>>.')
         return
     
@@ -471,7 +498,7 @@ class HMsgClassifier():
             Returns: the prediction
         """       
         X_data = p_X
-        v_return = np.zeros([p_X.shape[0], len(self.__classes)])
+        v_return = np.zeros([p_X.shape[0], len(self.__classes)])        
         for model in self.__models:
             if model['useModel']:
                 v_key = model['key']
@@ -531,7 +558,7 @@ class HMsgClassifier():
             v_data['__Diff'] = v_data['__True Sum'] - v_data['__Pred Sum']
             
             print('\n-------------------------------------------------------------------')
-            print(v_data)
+            display(v_data)
             print(' ')
                         
         if not p_classes is None:
@@ -551,3 +578,6 @@ class HMsgClassifier():
             print(confusion_matrix(p_y_true.iloc[:, v_idx], p_y_pred[:, v_idx]))
             print(' ')
         return
+    
+if __name__ == '__main__':
+    None

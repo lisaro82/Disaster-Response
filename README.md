@@ -41,6 +41,9 @@ The application will accept the filling of a new message and will output the lin
 
 [message]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster_Response_Project_01.png "Disaster Response Project Message"
 ![alt text][message]
+
+[messagePredictions]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster_Response_Project_06.png "Disaster Response Project Message - Predictions"
+![alt text][messagePredictions]
    
 ### Data exploration
 The dataset contains feature << genre >> that has the following possible values:
@@ -48,7 +51,7 @@ The dataset contains feature << genre >> that has the following possible values:
     - news
     - social
 
-This feature is one of the most balanced one in the dataset. It has the following distribution:
+This feature is one of the most balanced in the dataset. It has the following distribution:
 
 [genreDistribution01]: https://github.com/lisaro82/___Disaster-Response/blob/master/screenShots/Disaster_Response_Project_02_01.png "Disaster Response Project Genre distribution 01"
 ![alt text][genreDistribution01]
